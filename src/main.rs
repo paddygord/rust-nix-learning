@@ -7,7 +7,13 @@ use na::{Isometry3, Vector3, Point3};
 use ncollide3d::query::{Ray, RayCast};
 use ncollide3d::shape::*;
 
+#[macro_use]
+extern crate serde_derive;
+extern crate serde;
+extern crate bincode;
+
 #[derive(Debug)]
+#[derive(Serialize, Deserialize)]
 struct Character {
     position: Vector3<f32>,
     velocity: Vector3<f32>,
@@ -41,23 +47,27 @@ fn main() {
     let server = env::args().len() == 2 && env::args().nth(1).unwrap() == "--server";
     if server {
         let socket = UdpSocket::bind("127.0.0.1:34254").expect("failed to bind address");
-        let mut buf = [0; 10];
-        let (amt, src) = socket.recv_from(&mut buf).expect("failed to recv message");
-        let buf = &mut buf[..amt];
-        for b in buf.iter_mut() {
-            *b += 1;
-        }
-        socket.send_to(buf, &src).expect("failed to send message");
+        let mut buf = [0; 100];
+        let (_amt, src) = socket.recv_from(&mut buf).expect("failed to recv message");
+        let mut character: Character = bincode::deserialize(&buf[..]).unwrap();
+        character.position += character.velocity;
+        let enc = bincode::serialize(&character).unwrap();
+        socket.send_to(&enc, &src).expect("failed to send message");
     } else {
         let socket = UdpSocket::bind("127.0.0.1:34255").expect("failed to bind address");
         socket.connect("127.0.0.1:34254").expect("failed to connect");
-        let mut buf = [1; 10];
-        println!("sending {:?}", buf);
-        socket.send(&buf).expect("failed to send message");
+        let mut character = Character{velocity: Vector3::new(1.0, 0.0, 0.0), ..Default::default()};
+        println!("{:?}", character);
+        socket.send(
+            &bincode::serialize(&character).unwrap()
+        ).expect("failed to send message");
+        let mut buf = [0; 100];
         socket.recv(&mut buf).expect("failed to recv message");
-        println!("received {:?}", buf);
+        character = bincode::deserialize(&buf[..]).unwrap();
+        println!("{:?}", character);
     }
 
+    /*
     let mut g = Gamestate{
         characters: vec![],
     };
@@ -69,4 +79,5 @@ fn main() {
             x.position += x.velocity;
         }
     }
+    */
 }

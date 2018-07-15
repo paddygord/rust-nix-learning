@@ -4,5 +4,10 @@ version = "0.1.0"
 authors = ["Patrick Gordon <patrick@hadean.com>"]
 
 [dependencies]
-nalgebra = "0.15.0"
 ncollide3d = "0.16.0"
+serde = "1.0"
+serde_derive = "1.0"
+bincode = "1.0"
+
+[dependencies.nalgebra]
+features = ["serde-serialize"]
