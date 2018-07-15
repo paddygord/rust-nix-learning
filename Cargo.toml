@@ -4,3 +4,5 @@ version = "0.1.0"
 authors = ["Patrick Gordon <patrick@hadean.com>"]
 
 [dependencies]
+nalgebra = "0.15.0"
+ncollide3d = "0.16.0"
