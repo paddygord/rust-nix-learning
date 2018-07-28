@@ -48,33 +48,31 @@ fn main() {
     if server {
         let socket = UdpSocket::bind("127.0.0.1:34254").expect("failed to bind address");
 
-        /*
-        let mut buf: [u8; 100] = [0; 1024];
-        let (_amt, src) = socket.recv_from(&mut buf).expect("failed to recv message");
-        let mut character: Character = bincode::deserialize(&buf).unwrap();
-        */
+        let mut character: Character = Character::default();
+        let mut buf: Vec<u8> = vec![0; bincode::serialized_size(&character).unwrap() as usize];
+        loop {
+            let (_amt, src) = socket.recv_from(&mut buf).expect("failed to recv message");
+            character = bincode::deserialize(&mut buf).expect("FAILED");
 
-        let mut buf: Vec<u8> = Vec::with_capacity(1024);
-        let (_amt, src) = socket.recv_from(&mut buf).expect("failed to recv message");
-        let mut character: Character = bincode::deserialize(&mut buf).expect("FAILED");
+            character.position += character.velocity;
 
-        /*
-        character.position += character.velocity;
-        let enc = bincode::serialize(&character).unwrap();
-        socket.send_to(&enc, &src).expect("failed to send message");
-        */
+            let enc = bincode::serialize(&character).unwrap();
+            socket.send_to(&enc, &src).expect("failed to send message");
+        }
     } else {
         let socket = UdpSocket::bind("127.0.0.1:34255").expect("failed to bind address");
         socket.connect("127.0.0.1:34254").expect("failed to connect");
+
         let mut character = Character{velocity: Vector3::new(1.0, 0.0, 0.0), ..Default::default()};
-        println!("{:?}", character);
-        socket.send(
-            &bincode::serialize(&character).unwrap()
-        ).expect("failed to send message");
-        let mut buf = [0; 100];
-        socket.recv(&mut buf).expect("failed to recv message");
-        character = bincode::deserialize(&buf[..]).unwrap();
-        println!("{:?}", character);
+        let mut buf: Vec<u8> = vec![0; bincode::serialized_size(&character).unwrap() as usize];
+        loop {
+            socket.send(
+                &bincode::serialize(&character).unwrap()
+            ).expect("failed to send message");
+            socket.recv(&mut buf).expect("failed to recv message");
+            character = bincode::deserialize(&buf[..]).unwrap();
+            println!("{:?}", character);
+        }
     }
 
     /*
